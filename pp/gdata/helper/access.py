@@ -16,8 +16,8 @@ def get_log(extra=None):
     return logging.getLogger(m)
 
 
-class OAuthCalendarContactAccess(object):
-    """Uses OAuth to gain access to calendar and contact data.
+class OAuthServiceAccess(object):
+    """Uses OAuth to gain access to google service instance passed in.
 
     Based on the sample class demonstrating the three-legged OAuth process.
 
@@ -41,7 +41,7 @@ class OAuthCalendarContactAccess(object):
         """Prints out the contents of a feed to the console.
 
         Args:
-            feed: A gdata.docs.DocumentListFeed instance.
+            feed: A gdata.docs.<Something>ListFeed instance.
         """
         if not feed.entry:
             self.log.debug('No entries in feed.')
