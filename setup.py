@@ -11,22 +11,22 @@ except ImportError:
     use_setuptools()
     from setuptools import setup, find_packages
 
-Name='pp-gdata-helper'
-ProjectUrl=""
-Version="1.0.dev1"
-Author=''
-AuthorEmail='everyone at pythonpro dot co dot uk'
-Maintainer=''
-Summary=' pp-gdata-helper '
-License=''
-Description=Summary
-ShortDescription=Summary
+Name = 'pp-gdata-helper'
+ProjectUrl = ""
+Version = "1.0.dev1"
+Author = ''
+AuthorEmail = 'everyone at pythonpro dot co dot uk'
+Maintainer = ''
+Summary = ' pp-gdata-helper '
+License = ''
+Description = Summary
+ShortDescription = Summary
 
 needed = [
-    'sphinx', # for docs generation.
+    'sphinx',  # for docs generation.
     'evasion-common',
-
-    "ConfigObj", # used by demo myapp program to read main.ini
+    "cmdln",
+    "gdata",
 ]
 
 test_needed = [
@@ -50,7 +50,7 @@ PackageData = {
 # Example console script and paster template integration:
 EntryPoints = {
     'console_scripts': [
-        'helperapp = pp.gdata.helper.scripts.main:main',
+        'smsdemo = pp.gdata.helper.scripts.main:main',
     ],
 }
 
@@ -75,7 +75,7 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     package_data=PackageData,
-    eager_resources = EagerResources,
-    entry_points = EntryPoints,
-    namespace_packages = ['pp', 'pp.gdata'],
+    eager_resources=EagerResources,
+    entry_points=EntryPoints,
+    namespace_packages=['pp', 'pp.gdata'],
 )
