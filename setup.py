@@ -13,7 +13,7 @@ except ImportError:
 
 Name = 'pp-gdata-helper'
 ProjectUrl = ""
-Version = "1.0.dev1"
+Version = "1.0.1dev"
 Author = ''
 AuthorEmail = 'everyone at pythonpro dot co dot uk'
 Maintainer = ''

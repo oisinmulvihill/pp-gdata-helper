@@ -103,11 +103,63 @@ def main():
 
     gdata_service = gdata.service.GDataService()
 
+    print '\nSTEP 1: Set OAuth input parameters.'
     gdata_service.SetOAuthInputParameters(
             gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
             CONSUMER_KEY,
             consumer_secret=CONSUMER_SECRET
     )
+
+    print '\nSTEP 2: Fetch OAuth Request token.'
+    request_token = gdata_service.FetchOAuthRequestToken(scopes)
+
+    print 'Request Token fetched: %s' % request_token
+    print '\nSTEP 3: Set the fetched OAuth token.'
+    gdata_service.SetOAuthToken(request_token)
+
+    print 'OAuth request token set.'
+    print '\nSTEP 4: Generate OAuth authorization URL.'
+    auth_url = gdata_service.GenerateOAuthAuthorizationURL()
+
+    print 'Authorization URL: %s' % auth_url
+    raw_input('Manually go to the above URL and authenticate.'
+              'Press a key after authorization.')
+
+    print '\nSTEP 5: Upgrade to an OAuth access token.'
+
+    gdata_service2 = gdata.service.GDataService()
+
+    gdata_service2.SetOAuthInputParameters(
+            gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
+            CONSUMER_KEY,
+            consumer_secret=CONSUMER_SECRET
+    )
+
+#    request_token = "oauth_token_secret=GGec6wTANGyXs0tPMhLkFmje&oauth_token=4%2FEMtxEHuTR-m1ia7Hk_iozF08LYxX"
+
+    from gdata.oauth import OAuthToken
+
+    print "1. request_token: ", request_token.__dict__, type(request_token)
+
+    request_token2 = OAuthToken.from_string(str(request_token))
+    request_token2.scopes = scopes
+    request_token2.oauth_input_params = gdata_service2.GetOAuthInputParameters()
+
+    print "2. request_token2: ", request_token2.__dict__, type(request_token2)
+
+    gdata_service2.current_token = request_token2
+    gdata_service2.SetOAuthToken(request_token2)
+
+    gdata_service2.UpgradeToOAuthAccessToken()
+
+    print 'Access Token: %s == %s' % (
+        gdata_service.token_store.find_token(request_token.scopes[0]),
+        gdata_service.current_token
+    )
+
+    import pdb ; pdb.set_trace()
+
+    return
 
     # Gain access to calendar and contacts
     #
@@ -135,14 +187,30 @@ def main():
 
         log.debug("STEP 5: Upgrade to an OAuth access token using request_token <%s>." % request_token_str)
 
+#        import gdata
         from gdata.oauth import OAuthToken
 
-        token = OAuthToken(CONSUMER_KEY, CONSUMER_SECRET)
-        token.from_string(request_token_str)
-        # rt.set_token_string(request_token_str)
-        gdata_service.SetOAuthToken(token)
-        gdata_service.UpgradeToOAuthAccessToken()
-        access_token = gdata_service.token_store.find_token(request_token.scopes[0])
+        rt = OAuthToken(key=request_token_str, secret=CONSUMER_SECRET)
+        rt.oauth_input_params = gdata_service.GetOAuthInputParameters()
+
+        # rt = OAuthToken(CONSUMER_KEY, CONSUMER_SECRET)
+        # rt.oauth_input_params = gdata_service.GetOAuthInputParameters()
+        # rt.from_string(request_token_str)
+        # gdata_service.SetOAuthToken(rt)
+        # gdata_service.token_store.add_token(rt)
+        # print "oauth token?> ", gdata_service.current_token
+        # print ">>", isinstance(gdata_service.current_token, OAuthToken)
+
+        #gdata_service.UpgradeToOAuthAccessToken(authorized_request_token=rt)
+        #gdata_service.UpgradeToOAuthAccessToken()
+
+        access_token = gdata_service.UpgradeToOAuthAccessToken()
+        if access_token:
+            gdata_service.current_token = access_token
+            gdata_service.SetOAuthToken(access_token)
+
+#        access_token = gdata_service.token_store.find_token(request_token.scopes[0])
+
         log.info('Success, the access_token is <%s>' % str(access_token))
 
 
