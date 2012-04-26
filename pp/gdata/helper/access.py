@@ -4,6 +4,7 @@
 #
 import logging
 
+import gdata
 import gdata.auth
 import gdata.docs.service
 
@@ -16,52 +17,52 @@ def get_log(extra=None):
 
 
 class OAuthServiceAccess(object):
-    """Uses OAuth to gain access to google service instance passed in.
+    """Uses OAuth to gain access one or many google services.
 
-    Based on the sample class demonstrating the three-legged OAuth process.
+    This is used to recover the access_token needed use private data, for
+    one or more google service. The service to request access to is given
+    in the scope.
 
     """
-    log = get_log("OAuthCalendarContactAccess")
-
-    def __init__(self, google_service, consumer_key, consumer_secret):
+    def __init__(self, scopes, consumer_key, consumer_secret):
         """
-        :param google_service: ContactsService(), CalendarClient(), etc...
+        :param scopes: The services to request / gain access to.
 
         :param consumer_key: string Domain identifying third_party web application.
 
         :param consumer_secret: string Secret generated during registration.
 
         """
+        self.log = get_log("OAuthServiceAccess")
+        self.scopes = scopes
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
-        self.gd_client = google_service
-
-    def generate_auth_url(self):
-        """Uses OAuth to get a request token and then returns a URL.
-
-        The URL should be used to allow access
-
-        """
-        self.log.debug('STEP 1: Set OAuth input parameters.')
-        self.gd_client.SetOAuthInputParameters(
-                gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
-                self.consumer_key,
-                consumer_secret=self.consumer_secret
+        self.services = gdata.service.GDataService()
+        self.log.debug('Set OAuth input parameters.')
+        self.services.SetOAuthInputParameters(
+            gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
+            self.consumer_key,
+            consumer_secret=self.consumer_secret,
         )
 
-        self.log.debug('STEP 2: Fetch OAuth Request token.')
-        request_token = self.gd_client.FetchOAuthRequestToken()
-        self.log.debug('Request Token fetched: %s' % request_token)
+    def generate_auth_url(self):
+        """Use OAuth to get a request token and the authorisation URL.
 
-        self.log.debug('STEP 3: Set the fetched OAuth token.')
-        self.gd_client.SetOAuthToken(request_token)
+        :returns: (Request Token String, Auth URL)
 
-        self.log.debug('STEP 4: Generate OAuth authorization URL.')
-        auth_url = self.gd_client.GenerateOAuthAuthorizationURL()
+        """
+        self.log.debug('Fetch OAuth Request token.')
+        request_token = self.services.FetchOAuthRequestToken(self.scopes)
+
+        self.log.debug('Set the fetched OAuth token.')
+        self.services.SetOAuthToken(request_token)
+
+        self.log.debug('Generate OAuth authorization URL.')
+        auth_url = self.services.GenerateOAuthAuthorizationURL()
 
         self.log.info("URL <%s>" % auth_url)
 
-        return auth_url
+        return (str(request_token), auth_url)
 
     def gain_access_token(self, request_token):
         """Called at some point after the Customer has given permission for out
@@ -74,25 +75,127 @@ class OAuthServiceAccess(object):
         The Customer, who's account we are accessing, can deny access. This
         will mean the access_token will be invalidated.
 
-        :returns: The access token which now replaces the request_token.
+        :param request_token: The request_token string to be upgraded.
+
+        :returns: The access token string which replaces the request_token.
 
         """
-        self.log.debug("STEP 5: Upgrade to an OAuth access token using request_token <%s>." % request_token)
-        self.gd_client.SetOAuthToken(request_token)
-        self.gd_client.UpgradeToOAuthAccessToken()
-        access_token = self.gd_client.token_store.find_token(request_token.scopes[0])
-        self.log.info('Success, the access_token is <%s>' % access_token)
+        # request_token e.g:
+        # "oauth_token_secret=GP4xmW9dQzBKBWcm0dYJxiIU&oauth_token=4%2FgvYvD2N8q4N8iJRQBLF5qRVDLHEN"
+        #
+        self.log.debug(
+            "Upgrade to access token for request_token <%s>." % request_token
+        )
+
+        # Set the request_token before attempting to upgrade:
+        self.set_token(request_token)
+
+        self.services.UpgradeToOAuthAccessToken()
+        access_token = self.services.token_store.find_token(
+            self.services.current_token.scopes[0]
+        )
+        access_token = str(access_token)
+
+        # Should this get logged at all?
+        self.log.debug('Success, the access_token is <%s>' % access_token)
 
         return access_token
 
-    def set_access_token(self, access_token):
-        """Set the access token for communication.
+    @classmethod
+    def oath_token(cls, scopes, oauth_input_params, token_str):
+        """Convert the given token string into a gdata.auth.OAuth instance.
+        """
+        token = gdata.auth.OAuthToken(
+            scopes=scopes,
+            oauth_input_params=oauth_input_params
+        )
+        token.set_token_string(token_str)
 
-        The access_token will have been recovered after a successful recent
-        gain_access_token() call.
+        return token
+
+    def set_token(self, token_str):
+        """Set the request or access token for communication.
+
+        :param token_str: The Request or Access token string.
 
         :returns: None.
 
         """
-        self.log.debug("Setting access token <%s> for comms." % access_token)
-        self.gd_client.SetOAuthToken(access_token)
+        token = self.oath_token(
+            self.scopes,
+            self.services.GetOAuthInputParameters(),
+            token_str,
+        )
+        self.services.SetOAuthToken(token)
+
+    def get_token(self):
+        """Return the current gdata.auth.OAuthToken instance."""
+        return self.services.current_token
+
+
+import gdata.contacts.client
+
+
+class Contacts(object):
+    """A light wrapper around google's Contact service.
+    """
+    def __init__(self, consumer_key, consumer_secret, access_token):
+        """
+        :param access_token:  The authorised OAuth access token.
+        """
+        self.log = get_log("Contacts")
+
+        self.log.debug('Set OAuth input parameters for contact service.')
+        self.client = gdata.contacts.client.ContactsClient()
+        self.client.SetOAuthInputParameters(
+            gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
+            consumer_key,
+            consumer_secret=consumer_secret,
+        )
+
+        token = gdata.auth.OAuthToken(
+            oauth_input_params=self.client.GetOAuthInputParameters()
+        )
+        token.set_token_string(access_token)
+
+        self.client.SetOAuthToken(token)
+
+    def all(self):
+        """Retrieves the 'all contacts' feed."""
+        return self.client.GetContacts()
+
+    def print_contacts_feed(self, feed):
+        # copied and hacked from google contacts example:
+        if not feed.entry:
+            print '\nNo contacts in feed.\n'
+            return 0
+
+        for i, entry in enumerate(feed.entry):
+            print "Contact:"
+            if not entry.name is None:
+                family_name = entry.name.family_name is None and " " or entry.name.family_name.text
+                print family_name
+                full_name = entry.name.full_name is None and " " or entry.name.full_name.text
+                print full_name
+                given_name = entry.name.given_name is None and " " or entry.name.given_name.text
+                print given_name
+
+            if entry.content:
+                print '        %s' % (entry.content.text)
+
+            for p in entry.structured_postal_address:
+                print '        %s' % (p.formatted_address.text)
+
+            # Display the group id which can be used to query the contacts feed.
+            print '        Group ID: %s' % entry.id.text
+
+            # Display extended properties.
+            for extended_property in entry.extended_property:
+                if extended_property.value:
+                    value = extended_property.value
+                else:
+                    value = extended_property.GetXmlBlob()
+                print '        Extended Property %s: %s' % (extended_property.name, value)
+
+            for user_defined_field in entry.user_defined_field:
+                print '        User Defined Field %s: %s' % (user_defined_field.key, user_defined_field.value)
