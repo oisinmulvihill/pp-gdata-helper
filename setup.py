@@ -3,13 +3,7 @@
 Setuptools script for pp-gdata-helper (pp.gdata.helper)
 
 """
-
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages
+from setuptools import setup, find_packages
 
 Name = 'pp-gdata-helper'
 ProjectUrl = ""
@@ -50,7 +44,7 @@ PackageData = {
 # Example console script and paster template integration:
 EntryPoints = {
     'console_scripts': [
-        'smsdemo = pp.gdata.helper.scripts.main:main',
+        'oauth-admin = pp.gdata.helper.scripts.main:main',
     ],
 }
 

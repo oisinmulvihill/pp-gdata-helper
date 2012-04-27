@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-#
-# Based on the OAuthSample in the gdata-x.y.z/samples/oauth/oauth_example.py
-#
+"""
+"""
 import logging
 
 import gdata
@@ -17,7 +16,10 @@ def get_log(extra=None):
 
 
 class OAuthServiceAccess(object):
-    """Uses OAuth to gain access one or many google services.
+    """Facilitates the '3 Legged' OAuth process to gain access one or many
+    google services.
+
+    The services are specified via the scopes passed in to the constructor.
 
     This is used to recover the access_token needed use private data, for
     one or more google service. The service to request access to is given
@@ -28,9 +30,9 @@ class OAuthServiceAccess(object):
         """
         :param scopes: The services to request / gain access to.
 
-        :param consumer_key: string Domain identifying third_party web application.
+        :param consumer_key: the domain identifying 3rd party web application.
 
-        :param consumer_secret: string Secret generated during registration.
+        :param consumer_secret: the secret generated during registration.
 
         """
         self.log = get_log("OAuthServiceAccess")
@@ -81,7 +83,9 @@ class OAuthServiceAccess(object):
 
         """
         # request_token e.g:
-        # "oauth_token_secret=GP4xmW9dQzBKBWcm0dYJxiIU&oauth_token=4%2FgvYvD2N8q4N8iJRQBLF5qRVDLHEN"
+        # "oauth_token_secret=GP4xmW9dQzBKBWcm0dYJxiIU \
+        #        & \
+        #        oauth_token=4%2FgvYvD2N8q4N8iJRQBLF5qRVDLHEN"
         #
         self.log.debug(
             "Upgrade to access token for request_token <%s>." % request_token
@@ -131,71 +135,3 @@ class OAuthServiceAccess(object):
     def get_token(self):
         """Return the current gdata.auth.OAuthToken instance."""
         return self.services.current_token
-
-
-import gdata.contacts.client
-
-
-class Contacts(object):
-    """A light wrapper around google's Contact service.
-    """
-    def __init__(self, consumer_key, consumer_secret, access_token):
-        """
-        :param access_token:  The authorised OAuth access token.
-        """
-        self.log = get_log("Contacts")
-
-        self.log.debug('Set OAuth input parameters for contact service.')
-        self.client = gdata.contacts.client.ContactsClient()
-        self.client.SetOAuthInputParameters(
-            gdata.auth.OAuthSignatureMethod.HMAC_SHA1,
-            consumer_key,
-            consumer_secret=consumer_secret,
-        )
-
-        token = gdata.auth.OAuthToken(
-            oauth_input_params=self.client.GetOAuthInputParameters()
-        )
-        token.set_token_string(access_token)
-
-        self.client.SetOAuthToken(token)
-
-    def all(self):
-        """Retrieves the 'all contacts' feed."""
-        return self.client.GetContacts()
-
-    def print_contacts_feed(self, feed):
-        # copied and hacked from google contacts example:
-        if not feed.entry:
-            print '\nNo contacts in feed.\n'
-            return 0
-
-        for i, entry in enumerate(feed.entry):
-            print "Contact:"
-            if not entry.name is None:
-                family_name = entry.name.family_name is None and " " or entry.name.family_name.text
-                print family_name
-                full_name = entry.name.full_name is None and " " or entry.name.full_name.text
-                print full_name
-                given_name = entry.name.given_name is None and " " or entry.name.given_name.text
-                print given_name
-
-            if entry.content:
-                print '        %s' % (entry.content.text)
-
-            for p in entry.structured_postal_address:
-                print '        %s' % (p.formatted_address.text)
-
-            # Display the group id which can be used to query the contacts feed.
-            print '        Group ID: %s' % entry.id.text
-
-            # Display extended properties.
-            for extended_property in entry.extended_property:
-                if extended_property.value:
-                    value = extended_property.value
-                else:
-                    value = extended_property.GetXmlBlob()
-                print '        Extended Property %s: %s' % (extended_property.name, value)
-
-            for user_defined_field in entry.user_defined_field:
-                print '        User Defined Field %s: %s' % (user_defined_field.key, user_defined_field.value)
