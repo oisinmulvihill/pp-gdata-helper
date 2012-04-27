@@ -14,13 +14,15 @@ from . import access
 
 class OAuthAdminCmds(cmdln.Cmdln):
     """Usage:
-        smsdemo -c / --config <settings.ini> SUBCOMMAND [ARGS...]
-        smsdemo help SUBCOMMAND
+        oauth-admin -c / --config <settings.ini> SUBCOMMAND [ARGS...]
+        oauth-admin help SUBCOMMAND
 
     ${command_list}
     ${help_list}
 
     """
+    # The 'name' also the section name to use inside the
+    # config i.e. [oauthadmin]
     name = "oauthadmin"
 
     # *MUST* be https to get a private data!
@@ -88,6 +90,7 @@ class OAuthAdminCmds(cmdln.Cmdln):
             cfg = dict(config.items(self.name))
 
             def strip(i):
+                """Strip \" and \' around config strings."""
                 return i.replace('"', '').replace("'", "")
 
             self.config = dict(
