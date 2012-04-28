@@ -47,14 +47,19 @@ class OAuthServiceAccess(object):
             consumer_secret=self.consumer_secret,
         )
 
-    def generate_auth_url(self):
+    def generate_auth_url(self, **kwargs):
         """Use OAuth to get a request token and the authorisation URL.
 
         :returns: (Request Token String, Auth URL)
 
         """
         self.log.debug('Fetch OAuth Request token.')
-        request_token = self.services.FetchOAuthRequestToken(self.scopes)
+
+        if "scopes" not in kwargs:
+            self.log.debug('Adding scopes to Fetch OAuth Request.')
+            kwargs["scopes"] = self.scopes
+
+        request_token = self.services.FetchOAuthRequestToken(**kwargs)
 
         self.log.debug('Set the fetched OAuth token.')
         self.services.SetOAuthToken(request_token)
@@ -66,7 +71,7 @@ class OAuthServiceAccess(object):
 
         return (str(request_token), auth_url)
 
-    def gain_access_token(self, request_token):
+    def gain_access_token(self, request_token, oauth_verifier=""):
         """Called at some point after the Customer has given permission for out
         access.
 
@@ -94,7 +99,7 @@ class OAuthServiceAccess(object):
         # Set the request_token before attempting to upgrade:
         self.set_token(request_token)
 
-        self.services.UpgradeToOAuthAccessToken()
+        self.services.UpgradeToOAuthAccessToken(oauth_verifier=oauth_verifier)
         access_token = self.services.token_store.find_token(
             self.services.current_token.scopes[0]
         )
