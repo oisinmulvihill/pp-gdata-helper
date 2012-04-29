@@ -164,7 +164,7 @@ Access Token:
             access_token,
         )
 
-        contacts.print_contacts_feed(contacts.all())
+        print "\n".join(contacts.all_to_vcards())
 
     def do_list_calendars(self, subcmd, opts, access_token):
         """${cmd_name}: List the google user's personal.
@@ -184,4 +184,4 @@ Access Token:
             access_token,
         )
 
-        cal.print_own_calendars()
+        print "\n".join(cal.all_to_vcal())
