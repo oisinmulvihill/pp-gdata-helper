@@ -21,6 +21,9 @@ needed = [
     'evasion-common',
     "cmdln",
     "gdata",
+
+    # This provides vcard and icalendar read/write abilities.
+    'vobject',
 ]
 
 test_needed = [
